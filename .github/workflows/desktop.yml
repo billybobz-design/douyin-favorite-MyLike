@@ -1,4 +1,4 @@
-name: Electron desktop
+name: macOS community
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing release tag to build and append signed Mac assets to (leave empty to only build)"
+        description: "Existing macos-v<version> tag to build and create a draft release (empty = build only)"
         type: string
         default: ""
       sign_mac:
@@ -21,67 +21,8 @@ permissions:
   contents: read
 
 jobs:
-  windows:
-    name: Windows (${{ matrix.shard }}/4)
-    runs-on: windows-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    defaults:
-      run:
-        working-directory: apps/desktop
-        shell: pwsh
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.sha }}
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.22.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.12.0
-          cache: pnpm
-          cache-dependency-path: apps/desktop/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec install-electron
-      - run: pnpm exec electron --version
-      - run: pnpm format:check
-      - run: pnpm test
-      - run: pnpm package:win
-      - name: Test packaged application
-        run: |
-          $env:MYLIKE_EXECUTABLE = Join-Path $PWD 'dist/win-unpacked/MyLike.exe'
-          pnpm test:e2e --fully-parallel --shard=${{ matrix.shard }}/4
-      - name: Test portable launcher
-        if: matrix.shard == 1
-        run: node tests/portable-smoke.mjs
-      - name: Create checksums
-        if: matrix.shard == 1
-        run: |
-          $files = Get-ChildItem dist/*.exe, dist/*.zip | Sort-Object Name
-          if ($files.Count -ne 2) { throw 'Expected one portable EXE and one ZIP.' }
-          $lines = $files | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
-          ($lines -join "`n") + "`n" | Set-Content dist/SHA256SUMS.txt -Encoding ascii -NoNewline
-      - uses: actions/upload-artifact@v4
-        if: matrix.shard == 1
-        with:
-          name: MyLike-Windows-x64
-          path: |
-            apps/desktop/dist/*.exe
-            apps/desktop/dist/*.zip
-            apps/desktop/dist/SHA256SUMS.txt
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: MyLike-Windows-test-results-${{ matrix.shard }}
-          path: apps/desktop/test-results
-          if-no-files-found: ignore
-
   macos:
+    if: github.repository == 'billybobz-design/douyin-favorite-MyLike'
     name: macOS (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
@@ -114,20 +55,20 @@ jobs:
       - name: Validate architecture and release version
         env:
           TARGET_ARCH: ${{ matrix.arch }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ inputs.release_tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
         run: |
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
             if (process.arch !== process.env.TARGET_ARCH) throw Error("Runner architecture mismatch");
             const { version } = JSON.parse(readFileSync("package.json", "utf8"));
             const tag = process.env.RELEASE_TAG;
-            if (tag && tag !== version && tag !== `v${version}`) throw Error("Release tag must match package.json version");
+            if (tag && tag !== `macos-v${version}`) throw Error("Release tag must be macos-v followed by package.json version");
           '
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec install-electron
       - run: pnpm exec electron --version
       - run: pnpm format:check
-      - run: pnpm test
+      - run: pnpm test --maxWorkers=2
       - name: Build ad-hoc signed test packages
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.sign_mac }}
         env:
@@ -170,10 +111,12 @@ jobs:
           path: apps/desktop/test-results
           if-no-files-found: ignore
 
-  append-mac-release:
-    name: Append Mac packages to existing release
-    needs: [windows, macos]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && inputs.sign_mac }}
+  draft-mac-release:
+    name: Prepare community release draft
+    needs: macos
+    if: >-
+      github.repository == 'billybobz-design/douyin-favorite-MyLike' &&
+      github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -186,11 +129,33 @@ jobs:
         with:
           name: MyLike-macOS-x64
           path: release
-      - name: Upload without replacing existing assets
+      - name: Verify downloaded packages
+        working-directory: release
+        run: |
+          sha256sum -c SHA256SUMS-mac-arm64.txt
+          sha256sum -c SHA256SUMS-mac-x64.txt
+      - name: Create or attach packages to a draft only
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          gh release view "$RELEASE_TAG"
+          if state=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$state" != "true" ]; then
+              echo "This version is already published. Use a new version tag."
+              exit 1
+            fi
+          else
+            cat > release-notes.md <<'NOTES'
+          MyLike macOS 社区预览版。开发、测试、发布和问题反馈均由本 Fork 维护。
+
+          - Apple Silicon 请选择 arm64，Intel 请选择 x64。
+          - 请核对本次签名及 Apple 公证状态；普通构建仅使用临时签名。
+          - 自动化测试不代表真实账号流程已完成人工验收。发布前请补充验收结果。
+          - 问题反馈：https://github.com/billybobz-design/douyin-favorite-MyLike/issues
+          NOTES
+            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease \
+              --title "MyLike ${RELEASE_TAG#macos-v} · macOS 社区预览版" \
+              --notes-file release-notes.md
+          fi
           gh release upload "$RELEASE_TAG" release/*.dmg release/*.zip release/SHA256SUMS-mac-*.txt

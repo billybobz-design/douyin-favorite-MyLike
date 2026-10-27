@@ -2680,7 +2680,7 @@ test('provides readable collection actions and resume banner, unified help links
   await page.getByRole('button', { name: '项目地址', exact: true }).click()
   await expect
     .poll(() => app.evaluate(() => (globalThis as any).__projectUrls))
-    .toEqual(['https://github.com/Hannah2227/douyin-favorite-MyLike'])
+    .toEqual(['https://github.com/billybobz-design/douyin-favorite-MyLike'])
   await page.getByRole('button', { name: '修改账号名称', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '修改账号名称', exact: true })
   await dialog.getByRole('textbox', { name: '本地账号名称', exact: true }).fill('自定义名称')
@@ -2843,7 +2843,7 @@ test('persists general and playback settings, restores a visible window, and pro
   expect(JSON.stringify(diagnostics)).not.toMatch(/Cookie|remoteId|测试账号|mylike\.sqlite|https:\/\//i)
   await page.getByRole('button', { name: '查看发布记录', exact: true }).click()
   expect(await app.evaluate(() => (globalThis as any).__external)).toEqual([
-    'https://github.com/Hannah2227/douyin-favorite-MyLike/releases'
+    'https://github.com/billybobz-design/douyin-favorite-MyLike/releases'
   ])
   await chooseOption('播放 / 暂停快捷键', 'K')
   await expect

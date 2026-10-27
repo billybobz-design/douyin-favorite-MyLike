@@ -15,7 +15,7 @@ import {
 import { Authentication } from './authentication'
 import type { AccessTarget } from './douyin/page-state'
 import { AppError } from './errors'
-import { version } from '../../package.json'
+import { homepage, version } from '../../package.json'
 import { RequestLane } from './request-lane'
 import { CollectionService } from './collection'
 import { FileTransfers } from './transfers'
@@ -381,7 +381,7 @@ export class Application {
       }
       case 'openReleases':
         try {
-          await shell.openExternal('https://github.com/Hannah2227/douyin-favorite-MyLike/releases')
+          await shell.openExternal(`${homepage}/releases`)
         } catch {
           throw new AppError('OPEN_BROWSER_FAILED', '无法打开系统默认浏览器，请稍后重试。')
         }
@@ -782,7 +782,7 @@ export class Application {
         return null
       case 'openProject':
         try {
-          await shell.openExternal('https://github.com/Hannah2227/douyin-favorite-MyLike')
+          await shell.openExternal(homepage)
         } catch {
           throw new AppError('OPEN_BROWSER_FAILED', '无法打开系统默认浏览器，请检查默认浏览器设置后重试。')
         }
