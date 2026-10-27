@@ -2838,13 +2838,14 @@ test('persists general and playback settings, restores a visible window, and pro
   await page.getByRole('button', { name: '刷新占用', exact: true }).click()
   await page.getByRole('button', { name: '关于', exact: true }).click()
   await page.getByRole('button', { name: '复制诊断信息', exact: true }).click()
+  await expect.poll(() => app.evaluate(() => (globalThis as any).__copied.length)).toBeGreaterThan(0)
   const diagnostics = JSON.parse(await app.evaluate(() => (globalThis as any).__copied.at(-1)))
   expect(diagnostics).toMatchObject({ application: 'MyLike', version })
   expect(JSON.stringify(diagnostics)).not.toMatch(/Cookie|remoteId|测试账号|mylike\.sqlite|https:\/\//i)
   await page.getByRole('button', { name: '查看发布记录', exact: true }).click()
-  expect(await app.evaluate(() => (globalThis as any).__external)).toEqual([
-    'https://github.com/billybobz-design/douyin-favorite-MyLike/releases'
-  ])
+  await expect
+    .poll(() => app.evaluate(() => (globalThis as any).__external))
+    .toEqual(['https://github.com/billybobz-design/douyin-favorite-MyLike/releases'])
   await chooseOption('播放 / 暂停快捷键', 'K')
   await expect
     .poll(async () => (await invoke('snapshot')).data.playbackPreferences.shortcuts.playPause)

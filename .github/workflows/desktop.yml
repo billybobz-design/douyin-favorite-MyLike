@@ -20,6 +20,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: macos-community-${{ github.ref }}-${{ inputs.release_tag }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 jobs:
   macos:
     if: github.repository == 'billybobz-design/douyin-favorite-MyLike'
