@@ -4739,8 +4739,14 @@ for (const kind of ['video', 'live'] as const) {
         .webContents.setZoomFactor(1)
     )
     await page.getByRole('button', { name: '开始播放', exact: true }).click()
+    const waitForFullscreen = async (active: boolean) => {
+      await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(active)
+      // HTML fullscreen precedes the native macOS Space resize. Capture bounds
+      // and send the next shortcut only after that transition has finished.
+      expect(await invoke('fullscreenReady')).toMatchObject({ ok: true })
+    }
     await page.keyboard.press('f')
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true)
+    await waitForFullscreen(true)
     await expect
       .poll(async () => {
         const box = await bounds()
@@ -4751,17 +4757,17 @@ for (const kind of ['video', 'live'] as const) {
     await page.keyboard.press('h')
     await expect(page.getByRole('region', { name: '播放器', exact: true }).getByRole('button')).toHaveCount(0)
     await page.keyboard.press('f')
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false)
+    await waitForFullscreen(false)
     await expect(page.getByRole('region', { name: '播放器', exact: true }).getByRole('button')).toHaveCount(0)
     await page.keyboard.press('f')
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true)
+    await waitForFullscreen(true)
     await expect(page.getByRole('region', { name: '播放器', exact: true }).getByRole('button')).toHaveCount(0)
     await page.keyboard.press('Escape')
     await expect.poll(bounds).toEqual(fullscreenBounds)
     await expect.poll(() => media.evaluate((video) => (video as HTMLVideoElement).paused)).toBe(false)
     await page.getByRole('button', { name: '暂停播放', exact: true }).click()
     await page.keyboard.press('Escape')
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false)
+    await waitForFullscreen(false)
     if (kind === 'video') {
       await expect
         .poll(() => app.evaluate(() => (globalThis as any).__mediaRequests?.length ?? 0))
