@@ -292,48 +292,53 @@ describe('SQLite transactions and account ownership', () => {
     expect(store.call('query', query).total).toBe(2)
     expect(store.call('checkpoint', { accountId: 'a' })?.cursor).toBe('20')
   })
-  it('queries and selects a 50,000-row library with bounded result pages', () => {
-    const { store } = setup(),
-      items = Array.from({ length: 50000 }, (_, i) => ({
-        ...item(String(100000 + i)),
-        title: `第${i}条${i % 10 === 0 ? '旅行' : '日常'}`,
-        publishedAt: +new Date(2020 + (i % 6), i % 12, 1) / 1000,
-        mediaType: i % 2 ? ('gallery' as const) : ('video' as const)
-      }))
-    store.call('savePage', { accountId: 'a', remoteId: 'remote-a', items, cursor: '0', hasMore: false })
-    const times: number[] = []
-    let first = 0
-    for (let i = 0; i < 30; i++) {
-      const begin = performance.now()
-      const page = store.call('query', {
-        ...query,
-        search: i % 3 === 0 ? '旅行' : '',
-        year: i % 3 === 1 ? 2024 : null,
-        month: i % 3 === 1 ? 5 : null,
-        sort: i % 2 ? 'collected' : 'published'
-      })
-      const elapsed = performance.now() - begin
-      if (i === 0) first = elapsed
-      times.push(elapsed)
-      expect(page.items.length).toBeLessThanOrEqual(60)
-    }
-    for (const sort of ['published', 'collected'] as const) {
-      const filter = { ...query, search: '旅行', sort }
-      const expected = Array.from({ length: 10 }, (_, i) =>
-        store.call('query', { ...filter, offset: i * 100, limit: 100 }).items.map((w) => w.id)
-      ).flat()
-      expect(store.call('matchingIds', filter)).toEqual(expected)
-      expect(expected).toHaveLength(1000)
-    }
-    console.log(
-      '50k SQLite benchmark:',
-      JSON.stringify({
-        firstQueryMs: Math.round(first),
-        p95Ms: Math.round(times.sort((a, b) => a - b)[Math.ceil(times.length * 0.95) - 1]!),
-        samples: times.length
-      })
-    )
-  }, 20000)
+  // Shared CI runners need time for the full fixture, query and selection workload.
+  it(
+    'queries and selects a 50,000-row library with bounded result pages',
+    () => {
+      const { store } = setup(),
+        items = Array.from({ length: 50000 }, (_, i) => ({
+          ...item(String(100000 + i)),
+          title: `第${i}条${i % 10 === 0 ? '旅行' : '日常'}`,
+          publishedAt: +new Date(2020 + (i % 6), i % 12, 1) / 1000,
+          mediaType: i % 2 ? ('gallery' as const) : ('video' as const)
+        }))
+      store.call('savePage', { accountId: 'a', remoteId: 'remote-a', items, cursor: '0', hasMore: false })
+      const times: number[] = []
+      let first = 0
+      for (let i = 0; i < 30; i++) {
+        const begin = performance.now()
+        const page = store.call('query', {
+          ...query,
+          search: i % 3 === 0 ? '旅行' : '',
+          year: i % 3 === 1 ? 2024 : null,
+          month: i % 3 === 1 ? 5 : null,
+          sort: i % 2 ? 'collected' : 'published'
+        })
+        const elapsed = performance.now() - begin
+        if (i === 0) first = elapsed
+        times.push(elapsed)
+        expect(page.items.length).toBeLessThanOrEqual(60)
+      }
+      for (const sort of ['published', 'collected'] as const) {
+        const filter = { ...query, search: '旅行', sort }
+        const expected = Array.from({ length: 10 }, (_, i) =>
+          store.call('query', { ...filter, offset: i * 100, limit: 100 }).items.map((w) => w.id)
+        ).flat()
+        expect(store.call('matchingIds', filter)).toEqual(expected)
+        expect(expected).toHaveLength(1000)
+      }
+      console.log(
+        '50k SQLite benchmark:',
+        JSON.stringify({
+          firstQueryMs: Math.round(first),
+          p95Ms: Math.round(times.sort((a, b) => a - b)[Math.ceil(times.length * 0.95) - 1]!),
+          samples: times.length
+        })
+      )
+    },
+    process.env.CI ? 60_000 : 20_000
+  )
 })
 
 it('preserves an interrupted head and deep cursor when switching to downward collection without a schema upgrade', () => {
