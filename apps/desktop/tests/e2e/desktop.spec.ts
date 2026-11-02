@@ -5183,6 +5183,24 @@ for (const kind of ['video', 'live'] as const) {
           stage: { x: stage.x, y: stage.y, width: stage.width, height: stage.height }
         }
       })
+    const coordinates = (box: { x: number; y: number; width: number; height: number }) => [
+      box.x,
+      box.y,
+      box.width,
+      box.height
+    ]
+    const expectBounds = async (expected: Awaited<ReturnType<typeof bounds>>) => {
+      const target = [...coordinates(expected), ...coordinates(expected.stage)]
+      // Fractional zoom can round layout edges to different subpixel grids.
+      // Check every position and dimension with less than 0.05 CSS px drift.
+      await expect
+        .poll(async () => {
+          const actual = await bounds()
+          const values = [...coordinates(actual), ...coordinates(actual.stage)]
+          return Math.max(...values.map((value, index) => Math.abs(value - target[index]!)))
+        })
+        .toBeLessThan(0.05)
+    }
     for (const zoom of [1, 1.25, 1.5]) {
       await app.evaluate(
         ({ BrowserWindow }, zoom) =>
@@ -5208,7 +5226,7 @@ for (const kind of ['video', 'live'] as const) {
       )
       await expect(page.locator('[popover]:popover-open')).toHaveCount(0)
       await page.keyboard.press('Escape')
-      await expect.poll(bounds).toEqual(original)
+      await expectBounds(original)
       expect(await media.evaluate((node) => (node as HTMLVideoElement).paused)).toBe(true)
       expect(await media.evaluate((node) => (node as HTMLVideoElement).currentTime)).toBeCloseTo(
         pausedTime,
@@ -5239,6 +5257,13 @@ for (const kind of ['video', 'live'] as const) {
       // HTML fullscreen precedes the native macOS Space resize. Capture bounds
       // and send the next shortcut only after that transition has finished.
       expect(await invoke('fullscreenReady')).toMatchObject({ ok: true })
+      // The native event can precede Chromium's final resize/paint frame.
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          })
+      )
     }
     await page.keyboard.press('f')
     await waitForFullscreen(true)
@@ -5258,7 +5283,7 @@ for (const kind of ['video', 'live'] as const) {
     await waitForFullscreen(true)
     await expect(page.getByRole('region', { name: '播放器', exact: true }).getByRole('button')).toHaveCount(0)
     await page.keyboard.press('Escape')
-    await expect.poll(bounds).toEqual(fullscreenBounds)
+    await expectBounds(fullscreenBounds)
     await expect.poll(() => media.evaluate((video) => (video as HTMLVideoElement).paused)).toBe(false)
     await page.getByRole('button', { name: '暂停播放', exact: true }).click()
     await page.keyboard.press('Escape')
@@ -5289,7 +5314,7 @@ for (const kind of ['video', 'live'] as const) {
         for (let round = 0; round < 4; round++) {
           await page.keyboard.press('h')
           await page.keyboard.press('Escape')
-          await expect.poll(bounds).toEqual(original)
+          await expectBounds(original)
           expect(await node!.evaluate((video) => video === document.querySelector('video'))).toBe(true)
         }
         await node?.dispose()
@@ -5946,7 +5971,7 @@ test('unified health checks are read-only, show real green status and keep exact
   await screenshot(info.outputPath('health-normal.png'))
   const card = page.getByRole('region', { name: '自动采集任务', exact: true })
   await card.getByRole('button', { name: '向下采集', exact: true }).click()
-  await expect.poll(async () => (await invoke('snapshot')).data.collection.status).toBe('completed')
+  await expect.poll(async () => (await invoke('snapshot')).data.collection?.status).toBe('completed')
   expect((await invoke('query', { accountId })).data.total).toBeGreaterThan(0)
   await expect(card.getByRole('button')).toHaveText(['更新顶部', '向下采集', '停止'])
 })
