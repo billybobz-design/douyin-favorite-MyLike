@@ -3155,19 +3155,54 @@ test('uses focused player shortcuts and keeps inputs and unlike confirmation pro
   await expect(page.getByRole('button', { name: '开始播放', exact: true })).toBeVisible()
 })
 
+test('handles a shortcut in the first player frame before media finishes loading', async () => {
+  await prepareQueue(2, true)
+  await page.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector('.stage')) return
+      observer.disconnect()
+      const event = new KeyboardEvent('keydown', { key: 'n', code: 'KeyN', cancelable: true })
+      window.dispatchEvent(event)
+      ;(window as any).__firstPlayerShortcutHandled = event.defaultPrevented
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+  })
+  await page.getByRole('button', { name: '顺序播放', exact: true }).click()
+  await expect(page.locator('.stage')).toBeVisible()
+  expect(await page.evaluate(() => (window as any).__firstPlayerShortcutHandled)).toBe(true)
+  await expect.poll(async () => (await invoke('snapshot')).data.playbackPreferences.volume).toBe(0)
+})
+
 test('preserves a gallery shortcut pressed as soon as the slides appear', async () => {
   await prepareQueue(2, true)
+  // Prevent automatic advancement from satisfying the slide assertion when the
+  // first-frame shortcut was actually missed.
+  await page.getByRole('button', { name: '设置', exact: true }).click()
+  await page.getByRole('button', { name: '播放', exact: true }).click()
+  await page.getByLabel('进入作品自动播放', { exact: true }).uncheck()
+  await expect.poll(async () => (await invoke('snapshot')).data.playbackPreferences.autoplay).toBe(false)
+  await page.getByRole('button', { name: '喜欢的内容', exact: true }).click()
   // Deliver the shortcut at the first DOM commit with slides, before passive
   // media initialization can overwrite a user's newly selected image.
   await page.evaluate(() => {
     const observer = new MutationObserver(() => {
       if (!document.querySelector('.gallery-status')) return
       observer.disconnect()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight' }))
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        code: 'ArrowRight',
+        cancelable: true
+      })
+      window.dispatchEvent(event)
+      // The shortcut handler prevents default only when it handles the key.
+      ;(window as any).__galleryShortcutHandled = event.defaultPrevented
     })
     observer.observe(document.body, { childList: true, subtree: true })
   })
   await page.getByRole('button', { name: '顺序播放', exact: true }).click()
+  await expect(page.locator('.gallery-status')).toBeVisible()
+  expect(await page.evaluate(() => (window as any).__galleryShortcutHandled)).toBe(true)
+  await expect(page.getByRole('button', { name: '开始播放', exact: true })).toBeVisible()
   await expect(page.locator('.gallery-status')).toContainText('2 / 2')
   await expect(page.getByRole('button', { name: '恢复轮播', exact: true })).toBeVisible()
   await page.keyboard.press('ArrowLeft')

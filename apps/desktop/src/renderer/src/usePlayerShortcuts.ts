@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react'
+import { useLayoutEffect, useRef, type RefObject } from 'react'
 import type { PlaybackPreferences } from '../../shared/contracts'
 import type { ShortcutAction } from '../../shared/preferences'
 import { exitPlayerFullscreen } from './fullscreen'
@@ -16,7 +16,9 @@ export function usePlayerShortcuts(
   exit.current = back
   const leave = useRef(leaveClean)
   leave.current = leaveClean
-  useEffect(() => {
+  // The player can mount with cached media in its first frame. Register before
+  // paint so a shortcut on that frame cannot arrive before the listener exists.
+  useLayoutEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
