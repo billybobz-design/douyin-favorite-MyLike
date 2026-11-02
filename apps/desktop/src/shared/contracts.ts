@@ -1,8 +1,11 @@
+import type { HealthSnapshot } from './health'
 import { z } from 'zod'
 import type { RuntimeEvent } from './runtime-events'
+import type { RecoveryState } from './recovery-state'
 import { appPreferencesPatchSchema, playbackPreferencesSchema, type AppPreferences } from './preferences'
 export { playbackPreferencesSchema, shortcutKeys } from './preferences'
 
+export const MAX_BATCH_SIZE = 1000
 export const idSchema = z.string().uuid()
 export const workIdSchema = z.string().regex(/^\d{1,30}$/)
 export const filterSchema = z.object({
@@ -42,6 +45,12 @@ const queueSourceSchema = z.discriminatedUnion('type', [
 export const commands = {
   fullscreenReady: z.object({}),
   snapshot: z.object({}),
+  checkHealth: z.object({ accountId: idSchema }),
+  collectionAction: z.object({
+    accountId: idSchema,
+    source: z.enum(['likes', 'favorites']),
+    action: z.enum(['top', 'down', 'stop'])
+  }),
   createAccount: z.object({ name: z.string().trim().min(1).max(40) }),
   switchAccount: z.object({ accountId: idSchema }),
   renameAccount: z.object({ accountId: idSchema, name: z.string().trim().min(1).max(40) }),
@@ -53,11 +62,13 @@ export const commands = {
   collectPage: z.object({ accountId: idSchema, continue: z.boolean() }),
   collectionStart: z.object({ accountId: idSchema, mode: z.enum(['update', 'incremental', 'recheck']) }),
   runtimeEvents: z.object({ accountId: idSchema }),
-  favoritesStart: z.object({ accountId: idSchema }),
+  favoritesStart: z.object({ accountId: idSchema, mode: z.enum(['sync', 'update']).optional() }),
+  favoritesProbe: z.object({ accountId: idSchema }),
   favoritesControl: z.object({
     accountId: idSchema,
     taskId: idSchema,
-    action: z.enum(['pause', 'resume', 'stop'])
+    action: z.enum(['pause', 'resume', 'stop']),
+    mode: z.enum(['sync', 'update']).optional()
   }),
   favoriteFolders: z.object({ accountId: idSchema }),
   favoriteStatus: z.object({ accountId: idSchema, workId: workIdSchema }),
@@ -88,7 +99,7 @@ export const commands = {
   deleteLocal: z.object({ accountId: idSchema, workIds: z.array(workIdSchema).min(1).max(100000) }),
   unlikeStart: z.object({
     accountId: idSchema,
-    workIds: z.array(workIdSchema).min(1).max(1000),
+    workIds: z.array(workIdSchema).min(1).max(MAX_BATCH_SIZE),
     source: z.enum(['likes', 'favorites']).default('likes'),
     mode: z.enum(['single', 'batch'])
   }),
@@ -97,7 +108,8 @@ export const commands = {
     accountId: idSchema,
     taskId: idSchema,
     offset: z.number().int().min(0).max(1000),
-    limit: z.number().int().min(1).max(100).default(50)
+    limit: z.number().int().min(1).max(100).default(50),
+    issuesOnly: z.boolean().optional()
   }),
   unlikeHistory: z.object({ accountId: idSchema }),
   unlikeVerify: z.object({ accountId: idSchema, taskId: idSchema, workId: workIdSchema }),
@@ -132,10 +144,6 @@ export const commands = {
   checkDatabase: z.object({}),
   copyDiagnostics: z.object({}),
   openReleases: z.object({}),
-  exportLibrary: z.object({ accountId: idSchema, source: queueSourceSchema }),
-  importLibrary: z.object({ accountId: idSchema }),
-  importCommit: z.object({ accountId: idSchema, token: idSchema }),
-  importCancel: z.object({ token: idSchema }),
   backup: z.object({}),
   dataInfo: z.object({ accountId: idSchema.nullable() }),
   openDataFolder: z.object({ target: z.enum(['data', 'backups']) }),
@@ -162,26 +170,6 @@ export type PlaybackPreferences = z.infer<typeof playbackPreferencesSchema>
 export type PlaybackPosition = z.infer<typeof playbackPositionSchema>
 export type PlaybackScope = z.infer<typeof playbackScopeSchema>
 export type QueueCreate = z.infer<typeof commands.queueCreate>
-export interface ImportPreview {
-  token: string
-  accountId: string
-  accountName: string
-  fileName: string
-  sourceLabel: string
-  total: number
-  newCount: number
-  existingCount: number
-  duplicates: number
-}
-export interface ImportResult {
-  received: number
-  added: number
-  duplicates: number
-}
-export interface ExportResult {
-  fileName: string
-  count: number
-}
 export interface QueueState extends PlaybackScope {
   source?: 'likes' | 'favorites' | 'all'
   mode: 'sequence' | 'shuffle'
@@ -279,8 +267,12 @@ export interface UnlikeItem {
   errorCode: string | null
 }
 export interface Snapshot {
+  health?: HealthSnapshot | null
+  recovery?: RecoveryState[]
+  accessChecks?: { accountId: string; operation: string; at: number }[]
   favorites: FavoritesTask | null
-  favoritesActivity: 'requesting' | 'waiting' | 'recycling' | 'confirming' | 'cooling' | null
+  favoritesUpdate?: FavoritesTask | null
+  favoritesActivity: 'requesting' | 'waiting' | 'recycling' | 'confirming' | 'cooling' | 'probing' | null
   accounts: Account[]
   activeAccountId: string | null
   theme: 'dark' | 'light'
@@ -289,6 +281,8 @@ export interface Snapshot {
     accountId: string
     kind: 'login' | 'verification'
     status: 'waiting' | 'checking' | 'failed'
+    code?: string | null
+    retryAt?: number
     message: string
   } | null
   busy: boolean
@@ -343,7 +337,12 @@ export interface FavoritesTask {
   stage: 'all' | 'folders' | 'folder'
   folderId: string | null
   cursor: string
-  status: 'running' | 'paused' | 'stopped' | 'completed'
+  status: 'running' | 'paused' | 'stopped' | 'completed' | 'partial'
+  mode?: 'sync' | 'update'
+  skipped?: number
+  incomplete?: number
+  foldersDeferred?: number
+  issues?: { folderId: string; title: string; reason: string; errorCode: string }[]
   pages: number
   received: number
   added: number
@@ -360,12 +359,15 @@ export interface Outputs {
   copyDiagnostics: null
   openReleases: null
   favoritesStart: FavoritesTask
+  favoritesProbe: { stage: string; count: number; skipped: number; hasMore: boolean }
   favoritesControl: FavoritesTask
   favoriteFolders: FavoriteFolder[]
   favoriteStatus: { collected: boolean }
   favoriteEditor: FavoriteEditor
   favoriteSave: { collected: true; foldersAdded: number }
   favoriteCreateFolder: FavoriteFolder
+  checkHealth: HealthSnapshot
+  collectionAction: null
   snapshot: Snapshot
   createAccount: Account
   switchAccount: null
@@ -399,10 +401,6 @@ export interface Outputs {
   cancelMedia: null
   queueItems: { items: { index: number; work: Work }[]; total: number }
   playbackPreferences: PlaybackPreferences
-  exportLibrary: ExportResult | null
-  importLibrary: ImportPreview | null
-  importCommit: ImportResult
-  importCancel: null
   backup: { fileName: string }
   dataInfo: DataInfo
   openDataFolder: null
@@ -414,7 +412,8 @@ export interface Outputs {
   openProject: null
   diagnostics: Diagnostics
 }
-export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
+export type Result<T> =
+  { ok: true; data: T } | { ok: false; error: { code: string; message: string; retryAt?: number } }
 export interface DesktopAPI {
   invoke<K extends Command>(command: K, input: z.input<(typeof commands)[K]>): Promise<Result<Outputs[K]>>
   onChanged(callback: () => void): () => void

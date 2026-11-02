@@ -45,13 +45,13 @@ jobs:
         working-directory: apps/desktop
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.sha }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.22.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24.12.0
           cache: pnpm
@@ -100,7 +100,7 @@ jobs:
         run: pnpm test:e2e
       - name: Create checksums
         run: shasum -a 256 dist/*.dmg dist/*.zip | sed 's|  dist/|  |' > "dist/SHA256SUMS-mac-${{ matrix.arch }}.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: MyLike-macOS-${{ matrix.arch }}
           path: |
@@ -108,7 +108,7 @@ jobs:
             apps/desktop/dist/*.zip
             apps/desktop/dist/SHA256SUMS-mac-${{ matrix.arch }}.txt
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: MyLike-macOS-test-results-${{ matrix.arch }}
@@ -125,11 +125,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: MyLike-macOS-arm64
           path: release
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: MyLike-macOS-x64
           path: release
