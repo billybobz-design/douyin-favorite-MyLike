@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import {
   ArrowLeft,
   ChevronLeft,
@@ -183,7 +183,9 @@ export function Player({
     pause()
     void playback.ended(value, true, scope)
   }
-  useEffect(() => {
+  // Restore the media position before the new slides can be displayed or receive
+  // input. A passive effect can overwrite a shortcut pressed on that first frame.
+  useLayoutEffect(() => {
     setCandidate(0)
     setMediaError('')
     setMusicWarning('')

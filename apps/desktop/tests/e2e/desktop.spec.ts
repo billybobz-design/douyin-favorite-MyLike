@@ -3155,6 +3155,25 @@ test('uses focused player shortcuts and keeps inputs and unlike confirmation pro
   await expect(page.getByRole('button', { name: '开始播放', exact: true })).toBeVisible()
 })
 
+test('preserves a gallery shortcut pressed as soon as the slides appear', async () => {
+  await prepareQueue(2, true)
+  // Deliver the shortcut at the first DOM commit with slides, before passive
+  // media initialization can overwrite a user's newly selected image.
+  await page.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector('.gallery-status')) return
+      observer.disconnect()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight' }))
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+  })
+  await page.getByRole('button', { name: '顺序播放', exact: true }).click()
+  await expect(page.locator('.gallery-status')).toContainText('2 / 2')
+  await expect(page.getByRole('button', { name: '恢复轮播', exact: true })).toBeVisible()
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.locator('.gallery-status')).toContainText('1 / 2')
+})
+
 test('uses gallery shortcuts to pin and resume slides while disabling wheel navigation and autoplay when configured', async () => {
   await prepareQueue(2, true)
   // Change through the UI so the player uses the same preferences the user sees.
