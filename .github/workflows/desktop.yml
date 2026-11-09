@@ -66,6 +66,8 @@ jobs:
           '
           if [ -n "$RELEASE_TAG" ]; then
             git check-ref-format "refs/tags/$RELEASE_TAG"
+            # Checkout may fetch a commit without retaining its local tag ref.
+            git fetch --no-tags --depth=1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
             selected_commit=$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")
             if [ "$selected_commit" != "$(git rev-parse HEAD)" ]; then
               echo "Checked-out commit does not match selected tag: $RELEASE_TAG"
