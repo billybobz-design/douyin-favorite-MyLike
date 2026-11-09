@@ -8,7 +8,7 @@
 
 一个整理、搜索和回看抖音喜欢与收藏的 macOS 社区维护版本。
 
-本地适配上游 v2.0.4（1cf9680），包含应用内评论、分页、点赞顺序排序及存储修复，Mac 社区版本号为 `2.0.4-community.1`。
+已适配上游 v2.0.4（1cf9680），包含应用内评论、分页、点赞顺序排序及存储修复，Mac 社区版本号为 `2.0.4-community.1`。
 
 基于 [Hannah2227/douyin-favorite-MyLike](https://github.com/Hannah2227/douyin-favorite-MyLike) 开发。Mac 的开发、测试、发版和问题反馈由本 Fork 承担；Windows 版本由[上游项目](https://github.com/Hannah2227/douyin-favorite-MyLike)维护。Mac 问题请在[本仓库 Issues](https://github.com/billybobz-design/douyin-favorite-MyLike/issues)反馈。
 
@@ -35,9 +35,11 @@
 
 ![仪表盘](assets/readme/dashboard-preview.png)
 
-## 本次本地构建
+## v2.0.4 社区版进度
 
-当前 2.0.4-community.1 仅在本地生成，不推送 GitHub、不创建 Release。下方下载链接为此前已发布的 2.0.3-community.1，请使用本地 dist 目录中的新版本。Mac 默认数据仍保存在 `~/Library/Application Support/MyLikeElectron`，不会写入应用包；设置中可迁移数据目录。真实账号登录、评论和同步需人工验收。本次生成 Apple Silicon（arm64）版本：`apps/desktop/dist/MyLike-2.0.4-community.1-mac-arm64.dmg`，同目录提供 ZIP、校验文件及 `mac-arm64/MyLike.app`；Intel 仍可按下方命令构建，本次不声明已在 Intel 上验证。
+当前源码版本为 2.0.4-community.1，已完成 Apple Silicon 本地构建验证，尚未发布此版本的 Release。下方下载链接为此前已发布的 2.0.3-community.1，请使用本地 dist 目录中的新版本。Mac 默认数据仍保存在 `~/Library/Application Support/MyLikeElectron`，不会写入应用包；设置中可迁移数据目录。真实账号登录、评论和同步需人工验收。本地生成 Apple Silicon（arm64）版本：`apps/desktop/dist/MyLike-2.0.4-community.1-mac-arm64.dmg`，同目录提供 ZIP、校验文件及 `mac-arm64/MyLike.app`；Intel 仍可按下方命令构建，本次不声明已在 Intel 上验证。
+
+本次 Apple Silicon 验证：263 项单元测试通过；桌面检查 127 项通过，修正 3 项测试适配问题后定向重跑全部通过，共覆盖 130 项；1 项未提供旧版程序的往返兼容测试跳过。应用使用临时签名（ad-hoc），未完成 Developer ID 签名与 Apple 公证。DMG 已检查单层应用目录，并直接从只读映像启动验证主界面。
 
 ## 下载
 

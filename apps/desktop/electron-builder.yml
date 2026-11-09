@@ -1,6 +1,5 @@
 appId: io.mylike.desktop
 productName: MyLike
-electronDist: node_modules/electron/dist
 directories:
   output: dist
 files:
