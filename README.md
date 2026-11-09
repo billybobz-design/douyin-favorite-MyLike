@@ -8,7 +8,7 @@
 
 一个整理、搜索和回看抖音喜欢与收藏的 macOS 社区维护版本。
 
-已同步上游 v2.0.3 及最新清屏画面修复，Mac 社区版本号为 `2.0.3-community.1`。
+本地适配上游 v2.0.4（1cf9680），包含应用内评论、分页、点赞顺序排序及存储修复，Mac 社区版本号为 `2.0.4-community.1`。
 
 基于 [Hannah2227/douyin-favorite-MyLike](https://github.com/Hannah2227/douyin-favorite-MyLike) 开发。Mac 的开发、测试、发版和问题反馈由本 Fork 承担；Windows 版本由[上游项目](https://github.com/Hannah2227/douyin-favorite-MyLike)维护。Mac 问题请在[本仓库 Issues](https://github.com/billybobz-design/douyin-favorite-MyLike/issues)反馈。
 
@@ -35,11 +35,15 @@
 
 ![仪表盘](assets/readme/dashboard-preview.png)
 
+## 本次本地构建
+
+当前 2.0.4-community.1 仅在本地生成，不推送 GitHub、不创建 Release。下方下载链接为此前已发布的 2.0.3-community.1，请使用本地 dist 目录中的新版本。Mac 默认数据仍保存在 `~/Library/Application Support/MyLikeElectron`，不会写入应用包；设置中可迁移数据目录。真实账号登录、评论和同步需人工验收。本次生成 Apple Silicon（arm64）版本：`apps/desktop/dist/MyLike-2.0.4-community.1-mac-arm64.dmg`，同目录提供 ZIP、校验文件及 `mac-arm64/MyLike.app`；Intel 仍可按下方命令构建，本次不声明已在 Intel 上验证。
+
 ## 下载
 
 **[下载 macOS 社区预览版](https://github.com/billybobz-design/douyin-favorite-MyLike/releases/tag/macos-v2.0.3-community.1)** · [反馈 Mac 问题](https://github.com/billybobz-design/douyin-favorite-MyLike/issues)
 
-当前版本为 **2.0.3-community.1（预发布版）**，最低系统要求为 macOS 13。
+此前发布版本为 **2.0.3-community.1（预发布版）**，最低系统要求为 macOS 13。
 
 | Mac 芯片                | 安装包                                                                                                                                                                                 |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,9 +52,9 @@
 
 打开 DMG 后，将 MyLike 拖入「应用程序」。发布页同时提供 ZIP 和 SHA-256 校验文件，后续社区版本统一在[本仓库 Releases](https://github.com/billybobz-design/douyin-favorite-MyLike/releases)发布。
 
-本预览版使用临时签名，尚未完成 Developer ID 签名与 Apple 公证，macOS 可能阻止打开。此前两种 Mac 架构的完整自动化检查已通过；真实账号扫码、采集、同步和在线播放仍需完整人工验收，自动化测试不代表这些流程已全部实测。
+本预览版使用临时签名，尚未完成 Developer ID 签名与 Apple 公证，macOS 可能阻止打开。真实账号扫码、采集、同步和在线播放仍需完整人工验收，自动化测试不代表这些流程已全部实测。
 
-v2.0.3 与 v2.0.2 使用兼容的本地数据格式。升级前请使用 ⌘Q 完全退出旧版，再替换应用；数据目录保持不变。
+升级到 v2.0.4 前请备份原数据；新版包含数据库结构变更。升级前请使用 ⌘Q 完全退出旧版，再替换应用；数据目录保持不变。
 
 Mac 保留原生标题栏和菜单，支持 ⌘C / ⌘V / ⌘A 等编辑操作。关闭主窗口（红色按钮或 ⌘W）会隐藏窗口，后台任务和播放会继续；点击 Dock 图标或按 ⌘1 恢复窗口。使用 ⌘Q 或 MyLike 菜单中的退出，保存进度并退出应用。
 
@@ -60,11 +64,13 @@ Windows 用户请前往[原作者发布页](https://github.com/Hannah2227/douyin
 
 - **喜欢与收藏**：增量采集、断点续采、收藏夹同步与按夹浏览；播放中收藏、多选加入收藏夹及新建收藏夹。
 - **同步整理**：单条或批量取消抖音点赞、收藏，平台确认后同步更新本地记录。
-- **随手找到**：标题 / 作者搜索，类型与年月筛选，触底自动加载，长列表流畅浏览。
+- **随手找到**：标题 / 作者搜索，类型与年月筛选，每页 100 条，可输入页码后回车跳转。喜欢列表可按作品发布时间或抖音点赞先后排序。
 - **沉浸回看**：顺序 / 洗牌、断点续播、视频 / 图集 / 实况原声混音、倍速、全屏、清屏、播放列表与自定义快捷键。
+- **应用内评论**：边播放边浏览评论，滚动到底部会自动加载主评论，也可展开楼中楼，沿用应用内的抖音登录会话。
+- **应用内评论**：播放时浏览评论和楼中楼，沿用应用内登录会话。
 - **边采边看**：后台采集或取消点赞、收藏时继续播放，任务进度和异常集中管理，统一核验登录、喜欢与收藏状态。
 - **本地管理**：多账号隔离、账号改名与删除、批量整理与关键操作自动备份。
-- **按你的习惯**：深浅主题、界面缩放、窗口记忆、播放偏好与内容仪表盘。
+- **按你的习惯**：深浅主题、界面缩放、窗口记忆、播放偏好与内容仪表盘，按年份和作者查看收录数量。
 
 ## 快速上手
 
@@ -72,7 +78,7 @@ Windows 用户请前往[原作者发布页](https://github.com/Hannah2227/douyin
 2. **收录内容**：喜欢与收藏统一使用“更新顶部、向下采集、停止”：获取新内容、继续历史采集或保存进度停止；收藏同时支持收藏夹同步与按夹浏览。
 3. **开始回看**：直接点播，或在筛选范围内顺序 / 洗牌播放。清屏时按 Esc 或清屏快捷键退出，默认 H，可在设置修改。
 
-任务受阻时，到“连接与任务”点击“核验状态”，查看绿色正常、黄色不明确或红色异常及对应建议。需要登录或验证时会打开抖音窗口，完成后自动收起；核验不会自动恢复已停止的任务。更多操作见应用内的「使用教程」与「常见问题」。
+任务受阻时，到“任务”点击“核验状态”，查看绿色正常、黄色不明确或红色异常及对应建议。需要登录或验证时会打开抖音窗口，完成后自动收起；收藏采集因页面异常中断时，可从原断点核验并尝试续采。更多操作见应用内的「常见问题」。
 
 本地数据在 Windows 上保存在 `%APPDATA%\MyLikeElectron`，在 macOS 上保存在 `~/Library/Application Support/MyLikeElectron`。本地删除与远端取消点赞、收藏是不同操作，远端取消前会要求确认；取消收藏会移除全部收藏夹关联，喜欢记录保留。
 
@@ -87,7 +93,7 @@ pnpm exec install-electron
 pnpm dev
 ```
 
-`pnpm test` 运行单元测试，`pnpm test:e2e` 运行桌面集成测试，`pnpm package:win` 生成 Windows 发行包。旧版源码、测试和构建流程统一保存在 [`legacy/`](legacy/)。
+`pnpm test` 运行单元测试，`pnpm test:e2e` 运行桌面集成测试，`pnpm package:win` 生成 Windows 安装包。旧版源码、测试和构建流程统一保存在 [`legacy/`](legacy/)。
 
 ### 构建 Mac 版本
 
@@ -132,7 +138,7 @@ MYLIKE_EXECUTABLE="$PWD/dist/mac-arm64/MyLike.app/Contents/MacOS/MyLike" pnpm te
 后续发布流程：
 
 1. 在本 Fork 修改源码，更新 `apps/desktop/package.json` 版本，完成自动化测试和真实账号人工验收。
-2. 创建与版本一致的 `macos-v<版本号>` 标签，例如 `macos-v2.0.3-community.1`，推送到本 Fork。随后手动运行工作流，填写已存在的 `release_tag`；需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
+2. 创建与版本一致的 `macos-v<版本号>` 标签，例如 `macos-v2.0.4-community.1`，推送到本 Fork。随后手动运行工作流，填写已存在的 `release_tag`；需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
 3. 两种架构全部构建、测试成功后，工作流在本 Fork 创建带安装包和校验文件的**草稿预发布版**。不覆盖已发布版本或同名附件。
 4. 维护者核对安装包、签名状态和验收说明后再发布草稿。普通主分支 / PR 检查和不填写标签的手动运行只生成 Actions 产物，不创建 Release。
 
