@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing macos-v<version> tag to build and create a draft release (empty = build only)"
+        description: "Existing Git tag to build and create a draft release, e.g. v2.0.4-Macos (empty = selected ref)"
         type: string
         default: ""
       sign_mac:
@@ -56,18 +56,23 @@ jobs:
           node-version: 24.12.0
           cache: pnpm
           cache-dependency-path: apps/desktop/pnpm-lock.yaml
-      - name: Validate architecture and release version
+      - name: Validate architecture and selected tag
         env:
           TARGET_ARCH: ${{ matrix.arch }}
           RELEASE_TAG: ${{ inputs.release_tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
         run: |
           node --input-type=module -e '
-            import { readFileSync } from "node:fs";
             if (process.arch !== process.env.TARGET_ARCH) throw Error("Runner architecture mismatch");
-            const { version } = JSON.parse(readFileSync("package.json", "utf8"));
-            const tag = process.env.RELEASE_TAG;
-            if (tag && tag !== `macos-v${version}`) throw Error("Release tag must be macos-v followed by package.json version");
           '
+          if [ -n "$RELEASE_TAG" ]; then
+            git check-ref-format "refs/tags/$RELEASE_TAG"
+            selected_commit=$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")
+            if [ "$selected_commit" != "$(git rev-parse HEAD)" ]; then
+              echo "Checked-out commit does not match selected tag: $RELEASE_TAG"
+              exit 1
+            fi
+            echo "Building Git tag: $RELEASE_TAG"
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec install-electron
       - run: pnpm exec electron --version
@@ -120,7 +125,8 @@ jobs:
     needs: macos
     if: >-
       github.repository == 'billybobz-design/douyin-favorite-MyLike' &&
-      github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.release_tag != '' || github.ref_type == 'tag')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -159,7 +165,7 @@ jobs:
           - 问题反馈：https://github.com/billybobz-design/douyin-favorite-MyLike/issues
           NOTES
             gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease \
-              --title "MyLike ${RELEASE_TAG#macos-v} · macOS 社区预览版" \
+              --title "MyLike ${RELEASE_TAG} · macOS 社区预览版" \
               --notes-file release-notes.md
           fi
           gh release upload "$RELEASE_TAG" release/*.dmg release/*.zip release/SHA256SUMS-mac-*.txt

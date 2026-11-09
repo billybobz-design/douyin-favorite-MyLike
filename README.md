@@ -140,9 +140,9 @@ MYLIKE_EXECUTABLE="$PWD/dist/mac-arm64/MyLike.app/Contents/MacOS/MyLike" pnpm te
 后续发布流程：
 
 1. 在本 Fork 修改源码，更新 `apps/desktop/package.json` 版本，完成自动化测试和真实账号人工验收。
-2. 创建与版本一致的 `macos-v<版本号>` 标签，例如 `macos-v2.0.4-community.1`，推送到本 Fork。随后手动运行工作流，填写已存在的 `release_tag`；需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
+2. 创建并推送实际 Git 标签，例如 `v2.0.4-Macos`，无需固定前缀或与 `package.json` 版本相同。手动运行工作流时，在 `main` 上填写已存在的 `release_tag`，会构建该标签指向的源码；也可选择包含新版工作流的标签直接运行。Release 使用实际标签名，安装包文件名与应用内版本仍来自该标签源码的 `package.json`。需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
 3. 两种架构全部构建、测试成功后，工作流在本 Fork 创建带安装包和校验文件的**草稿预发布版**。不覆盖已发布版本或同名附件。
-4. 维护者核对安装包、签名状态和验收说明后再发布草稿。普通主分支 / PR 检查和不填写标签的手动运行只生成 Actions 产物，不创建 Release。
+4. 维护者核对安装包、签名状态和验收说明后再发布草稿。普通主分支 / PR 检查，以及选择分支且不填写 `release_tag` 的手动运行只生成 Actions 产物；手动选择标签或填写 `release_tag` 时创建对应标签的草稿。已有旧标签仍包含旧版工作流，请选择 `main` 并填写旧标签名，以使用本次修正的发布规则。
 
 Mac 的 CI、签名凭据、Releases 和 Issues 都在本仓库运行及维护。上游仅提供社区版入口，不承担 Mac 测试、发布或问题支持。
 
