@@ -101,6 +101,9 @@ jobs:
           pnpm package:mac:signed --${{ matrix.arch }}
           codesign --verify --deep --strict "dist/${{ matrix.app_dir }}/MyLike.app"
           spctl --assess --type execute --verbose "dist/${{ matrix.app_dir }}/MyLike.app"
+      - name: Verify Mac package layout and signature integrity
+        if: hashFiles('apps/desktop/tools/verify-mac-package.mjs') != ''
+        run: pnpm verify:mac
       - name: Test packaged application
         env:
           MYLIKE_EXECUTABLE: ${{ github.workspace }}/apps/desktop/dist/${{ matrix.app_dir }}/MyLike.app/Contents/MacOS/MyLike

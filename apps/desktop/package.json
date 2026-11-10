@@ -1,6 +1,6 @@
 {
   "name": "mylike-desktop",
-  "version": "2.0.4-community.1",
+  "version": "2.0.5-community.1",
   "description": "MyLike macOS community edition",
   "homepage": "https://github.com/billybobz-design/douyin-favorite-MyLike",
   "repository": {
@@ -33,7 +33,8 @@
     "package:win": "pnpm build && node tools/build-installer-ui.mjs && electron-builder --win nsis --x64 --publish never",
     "package:mac": "pnpm build && electron-builder --config electron-builder.mac-unsigned.yml --mac dmg zip --publish never",
     "package:mac:dir": "pnpm build && electron-builder --config electron-builder.mac-unsigned.yml --mac --dir --publish never",
-    "package:mac:signed": "pnpm build && electron-builder --mac dmg zip --config.forceCodeSigning=true --publish never"
+    "package:mac:signed": "pnpm build && electron-builder --mac dmg zip --config.forceCodeSigning=true --publish never",
+    "verify:mac": "node tools/verify-mac-package.mjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "3.14.21",

@@ -8,7 +8,7 @@
 
 一个整理、搜索和回看抖音喜欢与收藏的 macOS 社区维护版本。
 
-已适配上游 v2.0.4（1cf9680），包含应用内评论、分页、点赞顺序排序及存储修复，Mac 社区版本号为 `2.0.4-community.1`。
+已适配上游 v2.0.5（5d0bccf），包含手机清单导出、仪表盘筛选和查询优化，Mac 社区版本号为 `2.0.5-community.1`。
 
 基于 [Hannah2227/douyin-favorite-MyLike](https://github.com/Hannah2227/douyin-favorite-MyLike) 开发。Mac 的开发、测试、发版和问题反馈由本 Fork 承担；Windows 版本由[上游项目](https://github.com/Hannah2227/douyin-favorite-MyLike)维护。Mac 问题请在[本仓库 Issues](https://github.com/billybobz-design/douyin-favorite-MyLike/issues)反馈。
 
@@ -27,19 +27,15 @@
 
 ## 界面预览
 
-### 喜欢的内容
+| 喜欢的内容 | 仪表盘 |
+| :---: | :---: |
+| <a href="assets/readme/likes-preview.png"><img src="assets/readme/likes-preview.png" alt="喜欢的内容" width="420"></a> | <a href="assets/readme/dashboard-preview.png"><img src="assets/readme/dashboard-preview.png" alt="仪表盘" width="420"></a> |
 
-![喜欢的内容](assets/readme/likes-preview.png)
+## v2.0.5 社区版进度
 
-### 仪表盘
+当前源码版本为 2.0.5-community.1，已完成 Apple Silicon 本地构建验证，尚未发布此版本的 Release。下方下载链接为此前已发布的 2.0.3-community.1，请使用本地 dist 目录中的新版本。Mac 默认数据仍保存在 `~/Library/Application Support/MyLikeElectron`，不会写入应用包；设置中可迁移数据目录。真实账号登录、评论和同步需人工验收。本地生成 Apple Silicon（arm64）版本：`apps/desktop/dist/MyLike-2.0.5-community.1-mac-arm64.dmg`，同目录提供 ZIP、校验文件及 `mac-arm64/MyLike.app`；Intel 仍可按下方命令构建，本次不声明已在 Intel 上验证。
 
-![仪表盘](assets/readme/dashboard-preview.png)
-
-## v2.0.4 社区版进度
-
-当前源码版本为 2.0.4-community.1，已完成 Apple Silicon 本地构建验证，尚未发布此版本的 Release。下方下载链接为此前已发布的 2.0.3-community.1，请使用本地 dist 目录中的新版本。Mac 默认数据仍保存在 `~/Library/Application Support/MyLikeElectron`，不会写入应用包；设置中可迁移数据目录。真实账号登录、评论和同步需人工验收。本地生成 Apple Silicon（arm64）版本：`apps/desktop/dist/MyLike-2.0.4-community.1-mac-arm64.dmg`，同目录提供 ZIP、校验文件及 `mac-arm64/MyLike.app`；Intel 仍可按下方命令构建，本次不声明已在 Intel 上验证。
-
-本次 Apple Silicon 验证：263 项单元测试通过；桌面检查 127 项通过，修正 3 项测试适配问题后定向重跑全部通过，共覆盖 130 项；1 项未提供旧版程序的往返兼容测试跳过。应用使用临时签名（ad-hoc），未完成 Developer ID 签名与 Apple 公证。DMG 已检查单层应用目录，并直接从只读映像启动验证主界面。
+本版已通过 265 项单元测试、21 项重点桌面回归检查，以及类型、格式和 DMG 目录、版本、架构及签名完整性检查；未重新运行完整桌面测试集。详细结果见本地 dist 构建记录。应用使用临时签名（ad-hoc），未完成 Developer ID 签名与 Apple 公证。DMG 已从只读映像检查单层应用目录及签名完整性。
 
 ## 下载
 
@@ -56,7 +52,7 @@
 
 本预览版使用临时签名，尚未完成 Developer ID 签名与 Apple 公证，macOS 可能阻止打开。真实账号扫码、采集、同步和在线播放仍需完整人工验收，自动化测试不代表这些流程已全部实测。
 
-升级到 v2.0.4 前请备份原数据；新版包含数据库结构变更。升级前请使用 ⌘Q 完全退出旧版，再替换应用；数据目录保持不变。
+升级到 v2.0.5 前请备份原数据；新版包含数据库结构变更。升级前请使用 ⌘Q 完全退出旧版，再替换应用；数据目录保持不变。
 
 Mac 保留原生标题栏和菜单，支持 ⌘C / ⌘V / ⌘A 等编辑操作。关闭主窗口（红色按钮或 ⌘W）会隐藏窗口，后台任务和播放会继续；点击 Dock 图标或按 ⌘1 恢复窗口。使用 ⌘Q 或 MyLike 菜单中的退出，保存进度并退出应用。
 
@@ -71,7 +67,7 @@ Windows 用户请前往[原作者发布页](https://github.com/Hannah2227/douyin
 - **应用内评论**：边播放边浏览评论，滚动到底部会自动加载主评论，也可展开楼中楼，沿用应用内的抖音登录会话。
 - **应用内评论**：播放时浏览评论和楼中楼，沿用应用内登录会话。
 - **边采边看**：后台采集或取消点赞、收藏时继续播放，任务进度和异常集中管理，统一核验登录、喜欢与收藏状态。
-- **本地管理**：多账号隔离、账号改名与删除、批量整理与关键操作自动备份。
+- **本地管理**：多账号隔离、账号改名与删除、手机清单导出、批量整理与关键操作自动备份。
 - **按你的习惯**：深浅主题、界面缩放、窗口记忆、播放偏好与内容仪表盘，按年份和作者查看收录数量。
 
 ## 快速上手
@@ -113,6 +109,8 @@ pnpm package:mac --x64
 pnpm package:mac:dir
 ```
 
+打包后运行 `pnpm verify:mac`，检查应用版本、架构、签名完整性和 DMG 内的应用目录。工作流也执行该检查；临时签名通过完整性检查不代表已获 Apple 公证。
+
 输出位于 `apps/desktop/dist/`。Apple Silicon 的应用路径为 `dist/mac-arm64/MyLike.app`，Intel 为 `dist/mac/MyLike.app`。打包工具按目标架构获取 Electron，不复用本机其他架构的运行时。
 
 集成测试使用临时数据目录与受控接口，不需要真实抖音账号。可用 `MYLIKE_EXECUTABLE` 指向打包后的可执行文件，例如：
@@ -140,7 +138,7 @@ MYLIKE_EXECUTABLE="$PWD/dist/mac-arm64/MyLike.app/Contents/MacOS/MyLike" pnpm te
 后续发布流程：
 
 1. 在本 Fork 修改源码，更新 `apps/desktop/package.json` 版本，完成自动化测试和真实账号人工验收。
-2. 创建并推送实际 Git 标签，例如 `v2.0.4-Macos`，无需固定前缀或与 `package.json` 版本相同。手动运行工作流时，在 `main` 上填写已存在的 `release_tag`，会构建该标签指向的源码；也可选择包含新版工作流的标签直接运行。Release 使用实际标签名，安装包文件名与应用内版本仍来自该标签源码的 `package.json`。需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
+2. 创建并推送实际 Git 标签，例如 `v2.0.5-Macos`，无需固定前缀或与 `package.json` 版本相同。手动运行工作流时，在 `main` 上填写已存在的 `release_tag`，会构建该标签指向的源码；也可选择包含新版工作流的标签直接运行。Release 使用实际标签名，安装包文件名与应用内版本仍来自该标签源码的 `package.json`。需要正式签名时勾选 `sign_mac` 并配置上述 Secrets。
 3. 两种架构全部构建、测试成功后，工作流在本 Fork 创建带安装包和校验文件的**草稿预发布版**。不覆盖已发布版本或同名附件。
 4. 维护者核对安装包、签名状态和验收说明后再发布草稿。普通主分支 / PR 检查，以及选择分支且不填写 `release_tag` 的手动运行只生成 Actions 产物；手动选择标签或填写 `release_tag` 时创建对应标签的草稿。已有旧标签仍包含旧版工作流，请选择 `main` 并填写旧标签名，以使用本次修正的发布规则。
 
