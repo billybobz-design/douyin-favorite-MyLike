@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path'
 if (process.platform !== 'darwin') throw Error('Run package verification on macOS.')
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
 const arch = process.arch
+// Node/electron-builder call Intel x64; Mach-O tools report x86_64.
+const executableArch = arch === 'x64' ? 'x86_64' : arch
 const app = resolve(`dist/${arch === 'arm64' ? 'mac-arm64' : 'mac'}/MyLike.app`)
 const dmg = resolve(`dist/MyLike-${version}-mac-${arch}.dmg`)
 const run = (file, args) => execFileSync(file, args, { encoding: 'utf8' }).trim()
@@ -16,7 +18,7 @@ function verify(bundle) {
   const actual = run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', plist])
   if (actual !== version) throw Error(`Package version mismatch: ${actual} != ${version}`)
   const architectures = run('/usr/bin/lipo', ['-archs', join(bundle, 'Contents/MacOS/MyLike')]).split(/\s+/)
-  if (!architectures.includes(arch)) throw Error(`Missing ${arch} executable: ${bundle}`)
+  if (!architectures.includes(executableArch)) throw Error(`Missing ${arch} executable: ${bundle}`)
   run('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle])
 }
 verify(app)
