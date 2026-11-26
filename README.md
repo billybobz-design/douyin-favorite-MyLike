@@ -8,7 +8,7 @@
 
 一个整理、搜索和回看抖音喜欢与收藏的 macOS 社区维护版本。
 
-已适配上游 v2.0.7（1400645），支持分页与滚动浏览、批量框选与反选、经典主题，以及喜欢和收藏的手机清单导出，Mac 社区版本号为 `2.0.7-community.1`。
+已适配上游 v2.0.7（1400645），支持分页与滚动浏览、批量框选与反选、经典主题，以及喜欢和收藏的手机清单导出，Mac 社区版本号为 `2.0.7-Macos`。
 
 基于 [Hannah2227/douyin-favorite-MyLike](https://github.com/Hannah2227/douyin-favorite-MyLike) 开发。Mac 的开发、测试、发版和问题反馈由本 Fork 承担；Windows 版本由[上游项目](https://github.com/Hannah2227/douyin-favorite-MyLike)维护。Mac 问题请在[本仓库 Issues](https://github.com/billybobz-design/douyin-favorite-MyLike/issues)反馈。
 
@@ -33,7 +33,7 @@
 
 ## v2.0.7 社区版进度
 
-当前源码版本为 `2.0.7-community.1`。本地 Apple Silicon 安装包位于 `apps/desktop/dist/`，可使用同目录的 SHA-256 校验文件核对。GitHub 构建包可在对应的 Actions 运行页面查看。
+当前源码版本为 `2.0.7-Macos`。本地 Apple Silicon 安装包位于 `apps/desktop/dist/`，可使用同目录的 SHA-256 校验文件核对。GitHub 构建包可在对应的 Actions 运行页面查看。
 
 ## 下载
 
