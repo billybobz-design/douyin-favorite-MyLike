@@ -1,14 +1,19 @@
 import { configureTemporaryStorage, recoverableYearFailure, sqliteFailure } from './sqlite-policy'
 import { FavoritesStore, favoritesMigration } from './favorites'
 import { likedOrderJoin, likedOrderSchema, likedOrderSort, recordLikedOrder } from './liked-order'
-import { encodeMobileLibrary, MAX_MOBILE_EXPORT_ITEMS, type MobileExportRow } from './mobile-library'
+import {
+  encodeMobileLibrary,
+  MAX_MOBILE_EXPORT_ITEMS,
+  type MobileExportFolder,
+  type MobileExportRow
+} from './mobile-library'
 import { FavoriteState, favoriteStateSchema } from './favorite-state'
 import { RuntimeEventsStore } from './runtime-events'
 import { purgeAccountRows, purgeAccountBackups } from './account-purge'
 import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync, renameSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { Account, CollectionTask, Filter, Query } from '../../shared/contracts'
 import { MAX_BATCH_SIZE, MAX_LIBRARY_YEAR, MIN_LIBRARY_YEAR } from '../../shared/contracts'
 import type { Inputs, Replies } from './protocol'
@@ -636,10 +641,40 @@ export class Store {
             )
           return this.collection(input.accountId)!
         })
+      case 'workCover': {
+        const { accountId, workId } = input
+        this.account(accountId)
+        const row = this.db
+          .prepare(
+            `SELECT coverUrl FROM works WHERE id=? AND (
+            EXISTS(SELECT 1 FROM account_items WHERE accountId=? AND workId=works.id) OR
+            EXISTS(SELECT 1 FROM saved_items WHERE accountId=? AND workId=works.id) OR
+            EXISTS(SELECT 1 FROM playback_items p JOIN playback_queues q ON q.id=p.queueId
+              WHERE q.accountId=? AND p.workId=works.id))`
+          )
+          .get(workId, accountId, accountId, accountId) as { coverUrl: string | null } | undefined
+        if (!row) return { url: null, updated: false }
+        const updated = input.coverUrl !== row.coverUrl
+        if (updated) this.db.prepare('UPDATE works SET coverUrl=? WHERE id=?').run(input.coverUrl, workId)
+        return { url: updated ? input.coverUrl : row.coverUrl, updated }
+      }
       case 'query':
         return this.query(input)
       case 'mobileLibraryExport': {
         const account = this.account(input.accountId)
+        if (input.source === 'favorites') {
+          const rows = this.db
+            .prepare(
+              `SELECT w.id,w.title,w.author,w.publishedAt,w.mediaType,w.isLive,w.coverUrl
+               FROM saved_items a JOIN works w ON w.id=a.workId
+               WHERE a.accountId=? ORDER BY w.publishedAt DESC,w.id DESC LIMIT ?`
+            )
+            .all(input.accountId, MAX_MOBILE_EXPORT_ITEMS + 1) as unknown as MobileExportRow[]
+          return {
+            text: encodeMobileLibrary(rows, account.name, this.mobileFavoriteFolders(input.accountId)),
+            count: rows.length
+          }
+        }
         const rows = this.db
           .prepare(
             `SELECT w.id,w.title,w.author,w.publishedAt,w.mediaType,w.isLive,w.coverUrl
@@ -692,7 +727,11 @@ export class Store {
       case 'matchingIds': {
         this.account(input.accountId)
         const { from, params, order } = this.filter(input)
-        const rows = this.db.prepare(`SELECT w.id ${from} ${order} LIMIT ?`).all(...params, MAX_BATCH_SIZE)
+        const exclusion = input.excludeIds?.length ? ' AND w.id NOT IN (SELECT value FROM json_each(?))' : ''
+        if (exclusion) params.push(JSON.stringify(input.excludeIds))
+        const rows = this.db
+          .prepare(`SELECT w.id ${from}${exclusion} ${order} LIMIT ?`)
+          .all(...params, MAX_BATCH_SIZE)
         return rows.map((row) => String(row.id))
       }
       case 'deleteLocal': {
@@ -799,6 +838,26 @@ export class Store {
           ? 'ORDER BY a.firstSeen DESC,w.id DESC'
           : 'ORDER BY w.publishedAt DESC,w.id DESC'
     }
+  }
+  private mobileFavoriteFolders(accountId: string): MobileExportFolder[] {
+    const folders = new Map<string, MobileExportFolder>()
+    const rows = this.db
+      .prepare(
+        `SELECT f.id,f.title,m.workId
+       FROM saved_folders f LEFT JOIN saved_members m ON m.accountId=f.accountId AND m.folderId=f.id
+       WHERE f.accountId=? ORDER BY f.title,f.id,m.workId`
+      )
+      .iterate(accountId) as Iterable<{ id: string; title: string; workId: string | null }>
+    for (const { id, title, workId } of rows) {
+      let folder = folders.get(id)
+      if (!folder) {
+        const key = createHash('sha256').update(accountId).update('\0').update(id).digest('hex')
+        folder = { id: key, title, workIds: [] }
+        folders.set(id, folder)
+      }
+      if (workId !== null) folder.workIds.push(workId)
+    }
+    return [...folders.values()]
   }
   recordStorageFailure(accountId: unknown, method: string, error: unknown): void {
     const failure = sqliteFailure(error)

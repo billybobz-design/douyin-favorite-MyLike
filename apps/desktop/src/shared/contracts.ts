@@ -2,7 +2,13 @@ import type { HealthSnapshot } from './health'
 import { z } from 'zod'
 import type { RuntimeEvent } from './runtime-events'
 import type { RecoveryState } from './recovery-state'
-import { appPreferencesPatchSchema, playbackPreferencesSchema, type AppPreferences } from './preferences'
+import {
+  appPreferencesPatchSchema,
+  playbackPreferencesSchema,
+  themeSchema,
+  type AppPreferences,
+  type Theme
+} from './preferences'
 export { playbackPreferencesSchema, shortcutKeys } from './preferences'
 
 export const MAX_BATCH_SIZE = 1000
@@ -10,6 +16,7 @@ export const MIN_LIBRARY_YEAR = 2000
 export const MAX_LIBRARY_YEAR = 2200
 export const idSchema = z.string().uuid()
 export const workIdSchema = z.string().regex(/^\d{1,30}$/)
+export type MobileLibrarySource = 'likes' | 'favorites'
 export const filterSchema = z.object({
   accountId: idSchema,
   search: z.string().max(200).default(''),
@@ -51,7 +58,7 @@ const queueSourceSchema = z.discriminatedUnion('type', [
 export const commands = {
   fullscreenReady: z.object({}),
   snapshot: z.object({}),
-  exportMobileLibrary: z.object({ accountId: idSchema }),
+  exportMobileLibrary: z.object({ accountId: idSchema, source: z.enum(['likes', 'favorites']).optional() }),
   checkHealth: z.object({ accountId: idSchema }),
   collectionAction: z.object({
     accountId: idSchema,
@@ -105,7 +112,7 @@ export const commands = {
   stopRequest: z.object({}),
   query: querySchema,
   libraryOverview: z.object({ accountId: idSchema }),
-  matchingIds: filterSchema,
+  matchingIds: filterSchema.extend({ excludeIds: z.array(workIdSchema).max(100_000).optional() }),
   deleteLocal: z.object({ accountId: idSchema, workIds: z.array(workIdSchema).min(1).max(100000) }),
   unlikeStart: z.object({
     accountId: idSchema,
@@ -169,7 +176,7 @@ export const commands = {
     commentId: workIdSchema.optional(),
     cursor: workIdSchema.default('0')
   }),
-  theme: z.object({ theme: z.enum(['dark', 'light']) }),
+  theme: z.object({ theme: themeSchema }),
   windowPresentation: z.object({ player: z.boolean() }),
   openProject: z.object({}),
   diagnostics: z.object({})
@@ -288,7 +295,7 @@ export interface Snapshot {
   favoritesActivity: 'requesting' | 'waiting' | 'recycling' | 'confirming' | 'cooling' | 'probing' | null
   accounts: Account[]
   activeAccountId: string | null
-  theme: 'dark' | 'light'
+  theme: Theme
   engine: { status: EngineStatus; accountId: string | null }
   authentication: {
     accountId: string
